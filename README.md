@@ -22,11 +22,17 @@ El objetivo principal es **preservar la lógica de automatización**, facilitar 
 ## 🏗️ Estructura del repositorio
 
 n8n-workflows/
+
 ├─ README.md
+
 ├─ backup-n8n.ps1 # Script de exportación automática desde n8n
+
 ├─ sanitize-workflows.ps1 # Script de saneamiento de secretos
+
 └─ workflows/
+
 ├─ <WorkflowName>--<ID>.json
+
 └─ ...
 
 
