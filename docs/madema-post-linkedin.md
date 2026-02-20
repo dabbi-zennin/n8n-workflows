@@ -1,125 +1,109 @@
 # Madema | Post LinkedIn (n8n Workflow)
 
-##  Descripción General
+##  Objetivo
 
-Este workflow automatiza la generación y publicación de contenido en LinkedIn para **Natalia Márquez (SDR en MADEMA)**.
-
-El flujo:
-
-1. Analiza noticias recientes desde RSS
-2. Valida que el tema no esté repetido
-3. Genera contenido con OpenAI
-4. Genera imagen con IA
-5. Publica en LinkedIn (perfil y página)
-6. Guarda registro en Airtable
-7. Envía notificación por Telegram (éxito o error)
+Automatizar la generación y publicación de contenido en LinkedIn para MADEMA (perfil + página), utilizando noticias desde RSS y guardando registro en Airtable, con notificación por Telegram.
 
 ---
 
-#  Trigger
+##  Trigger
 
-**Schedule Trigger**
+### Schedule Trigger
 
-Ejecuta:
-- Lunes
-- Miércoles
-- Viernes
-- 10:00 AM
+- **Frecuencia:** Lunes / Miércoles / Viernes  
+- **Hora:** 10:00 AM  
 
 ---
 
-#  Arquitectura del Flujo
+##  Arquitectura del flujo (alto nivel)
 
-## 1️⃣ Ingesta de Contenido
+### 1) Ingesta (RSS)
 
-- RSS (Google News – facility management)
-- Limpieza y normalización de datos
-- Generación de hash para evitar duplicados
+- RSS Read obtiene items desde Google News (facility management).
+- Se normaliza el contenido para preparar inputs de generación.
 
----
-
-## 2️⃣ Validación Editorial
-
-- Consulta Airtable (posts recientes)
-- Compara semánticamente con memoria
-- Evita repetición temática (±30 días)
+>  Nota: El RSS entrega campos como `title`, `link`, `pubDate`, `content`.  
+> Es clave no perder `link` en nodos posteriores (Set / AI / etc).
 
 ---
 
-## 3️⃣ Generación de Contenido
+### 2) Memoria y prevención de repetición
+
+- Se consulta Airtable (posts recientes / memoria).
+- Se genera o actualiza contexto para reducir repetición (según reglas del flujo).
+
+---
+
+### 3) Generación del post (OpenAI)
 
 OpenAI genera:
 
-- tema
-- caption (120–300 palabras)
-- copy_imagen
-- text_image_prompt
+- `titulo`
+- `caption`
+- `plantilla` (ID o referencia de template)
+- `copy_imagen` (opcional)
 
-Se aplican reglas:
-- Rotación temática
-- Enfoque B2B
-- Enfoque en facilities y cumplimiento normativo
-- Alternancia oficina/planta
-- CTA moderado
+Salida esperada típica:
 
----
-
-## 4️⃣ Generación de Imagen
-
-- OpenAI genera imagen
-- Placid aplica plantilla visual corporativa
-- Estilo:
-  - Photo-realistic
-  - Entorno corporativo/industrial
-  - Paleta neutra + acento verde
-  - Sin texto incrustado
+- Titulo  
+- Caption  
+- plantilla  
+- (opcional) copy_imagen  
 
 ---
 
-## 5️⃣ Publicación en LinkedIn
+### 4) Render de imagen (Placid)
 
-Se publica mediante Blotato en:
+**Placid – Create an image from a template**
 
-- Perfil personal
-- Página corporativa Madema
+- Usa Template by ID.
+- Reemplaza layers (por ejemplo títulos/textos).
 
----
-
-## 6️⃣ Registro en Airtable
-
-Se guarda:
-
-- Caption
-- Plantilla utilizada
-- Fecha
-- Status (Done)
+>  Si aparece “Error fetching options from Placid” en Layer Name, suele ser un tema de credenciales/permiso o de carga del template; aun así se puede ejecutar si los nombres se escriben manualmente correctamente.
 
 ---
 
-## 7️⃣ Notificaciones
+### 5) Publicación en LinkedIn (Blotato)
 
-Telegram envía:
+**Blotato – Post Create**
 
--  Confirmación de publicación exitosa
--  Aviso de error si falla
+- Publica en Perfil (nodo `Perfil1`).
+- Publica en Página (nodo `Page1`).
+- Media: usa la URL de la imagen subida (nodo `Upload media`).
 
 ---
 
-#  Credenciales Necesarias en n8n
+### 6) Registro en Airtable
 
-Este JSON no incluye secretos.
+Guardar mínimo:
 
-Antes de ejecutar el workflow en otra instancia debes crear estas credenciales:
+- `Caption`
+- `Link` (si aplica)
+- `Plantilla`
+- `Fecha`
+- `Status` (Done / Error)
 
-- OpenAI API
-- Airtable Token API
-- Placid API
-- Blotato API
-- Telegram Bot Token
+---
 
-Recomendación:
+### 7) Notificaciones (Telegram)
 
-Nombrarlas por cliente para evitar confusión:
+Envía un mensaje por Telegram:
+
+-  Éxito: "Se realizó el posteo correctamente"
+-  Error: "Hubo un error al publicar"
+
+---
+
+##  Credenciales requeridas
+
+- OpenAI  
+- Airtable  
+- Placid  
+- Blotato  
+- Telegram  
+
+###  Recomendación de naming por cliente
+
 
 - OPENAI_MADEMA
 - AIRTABLE_MADEMA
@@ -129,22 +113,17 @@ Nombrarlas por cliente para evitar confusión:
 
 ---
 
-#  Variables de Entorno
+---
 
-Las variables de entorno permiten configurar valores sin hardcodearlos dentro del workflow.
+##  Variables de entorno (env.example)
 
-Se documentan en `env.example`.
-
-Ejemplo:
-
+```env
 MADEMA_AIRTABLE_BASE_ID=
-MADEMA_AIRTABLE_TABLE_POSTS=
 MADEMA_AIRTABLE_TABLE_REDES=
 MADEMA_TELEGRAM_CHAT_ID=
-MADEMA_BLOTATO_ACCOUNT_ID=
-MADEMA_LINKEDIN_PAGE_ID=
 MADEMA_RSS_URL=
-
+MADEMA_LINKEDIN_PAGE_ID=
+MADEMA_BLOTATO_ACCOUNT_ID=
 
 ## ¿Por qué usar variables de entorno?
 
